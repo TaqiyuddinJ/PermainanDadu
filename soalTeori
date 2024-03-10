@@ -1,0 +1,89 @@
+# Saya akan menggunakan relasional database seperti MySQL untuk aplikasi Rumah Makan
+# Dengan menggunakan relasional database, akan mendukung aplikasi Rumah Makan yang membutuhkan struktur data yang terorganisir dan mudah diakses.
+# Selain itu relasional database juga memiliki keuntungan di efisiensi dan skalabilitas.
+
+# Berikut ERD yang saya kembangkan untuk aplikasi Rumah Makan:
+digraph G {
+
+  # Defaults
+  node [shape=none, margin=0];
+
+  # One-to-many relation (crow's foot)
+  edge [arrowhead=crow, arrowtail=none, dir=both];
+
+  # Many-to-many relation (diamond)
+  edged [arrowhead=diamond, arrowtail=none, dir=both];
+
+  # Entities
+  Pelanggan [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Pelanggan</td></tr>
+      <tr><td align="left">id_pelanggan: int</td></tr>
+      <tr><td align="left">nama: varchar(255)</td></tr>
+      <tr><td align="left">alamat: text</td></tr>
+      <tr><td align="left">no_telp: varchar(20)</td></tr>
+      <tr><td align="left">email: varchar(255)</td></tr>
+    </table>
+  ];
+
+  Menu [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Menu</td></tr>
+      <tr><td align="left">id_menu: int</td></tr>
+      <tr><td align="left">nama_menu: varchar(255)</td></tr>
+      <tr><td align="left">harga: decimal</td></tr>
+      <tr><td align="left">kategori: varchar(50)</td></tr>
+      <tr><td align="left">deskripsi: text</td></tr>
+    </table>
+  ];
+
+  Pesanan [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Pesanan</td></tr>
+      <tr><td align="left">id_pesanan: int</td></tr>
+      <tr><td align="left">tanggal: date</td></tr>
+      <tr><td align="left">waktu: time</td></tr>
+      <tr><td align="left">no_meja: int</td></tr>
+      <tr><td align="left">FK_pelanggan: int</td></tr>
+    </table>
+  ];
+
+  Pembayaran [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Pembayaran</td></tr>
+      <tr><td align="left">id_pembayaran: int</td></tr>
+      <tr><td align="left">metode: varchar(50)</td></tr>
+      <tr><td align="left">no_kartu: varchar(20)</td></tr>
+      <tr><td align="left">total_bayar: decimal</td></tr>
+      <tr><td align="left">FK_pesanan: int</td></tr>
+    </table>
+  ];
+
+  Stok [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Stok</td></tr>
+      <tr><td align="left">id_stok: int</td></tr>
+      <tr><td align="left">nama_bahan_baku: varchar(255)</td></tr>
+      <tr><td align="left">jumlah_stok: int</td></tr>
+      <tr><td align="left">tgl_kadaluarsa: date</td></tr>
+    </table>
+  ];
+
+  Laporan [label=
+    <table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td bgcolor="lightblue">Laporan</td></tr>
+      <tr><td align="left">id_laporan: int</td></tr>
+      <tr><td align="left">tipe_laporan: varchar(50)</td></tr>
+      <tr><td align="left">periode: varchar(50)</td></tr>
+      <tr><td align="left">detail: text</td></tr>
+    </table>
+  ];
+
+  # Relationships
+  Pelanggan -| Pesanan [label="Membuat"];
+  Menu -| Pesanan [label="Dipesan"];
+  Pesanan -> Pembayaran [label="Dibayar dengan"];
+  Pesanan -> Laporan [label="Digunakan untuk membuat"];
+  Stok --> Menu [label="Digunakan untuk membuat" edged];
+
+}
