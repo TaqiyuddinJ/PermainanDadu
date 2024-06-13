@@ -13,66 +13,62 @@ type Player struct {
 	points int
 }
 
+var players []Player
+var activePlayers []Player
+var numPlayers, numDicePerPlayer int
+
 func main() {
 	// Seed untuk generator angka acak
 	seed := time.Now().UnixNano()
 	random := rand.New(rand.NewSource(seed))
-
-	var numPlayers, numDice int
 
 	// Input jumlah pemain dan jumlah dadu
 	fmt.Print("Masukkan jumlah pemain: ")
 	fmt.Scan(&numPlayers)
 
 	fmt.Print("Masukkan jumlah dadu: ")
-	fmt.Scan(&numDice)
+	fmt.Scan(&numDicePerPlayer)
 
 	// Inisialisasi pemain
-	players := make([]Player, numPlayers)
+	players = make([]Player, numPlayers)
 	for i := range players {
-		players[i] = Player{id: i + 1, dice: make([]int, numDice)}
+		players[i] = Player{id: i + 1, dice: make([]int, numDicePerPlayer)}
 	}
 
 	// Permainan dimulai
-	fmt.Println("\nPermainan dimulai!")
+	fmt.Printf("\nPemain = %d, Dadu = %d\n", numPlayers, numDicePerPlayer)
+	fmt.Println("==================")
 
 	// Counter giliran
 	turn := 1
-
+	activePlayers = players
 	// Loop permainan hingga hanya ada satu pemain tersisa
-	for len(players) > 1 {
-		fmt.Printf("==================\nGiliran %d lempar dadu:\n", turn)
+	for len(activePlayers) > 1 {
+		fmt.Printf("Giliran %d lempar dadu:\n", turn)
 
 		// Semua pemain melempar dadunya
-		for i := range players {
-			fmt.Printf("Pemain #%d (%d): \n", players[i].id, players[i].points)
-			for j := range players[i].dice {
-				players[i].dice[j] = rollDice(random)
+		for i := range activePlayers {
+			fmt.Printf("Pemain #%d (%d): ", activePlayers[i].id, activePlayers[i].points)
+			rollDiceForPlayer(random, &activePlayers[i])
+			if len(activePlayers[i].dice) > 0 {
+				fmt.Println(activePlayers[i].dice)
 			}
+		}
+		// Oper dadu angka 1 ke pemain berikutnya
+		for i := range activePlayers {
+			activePlayers[i].passDiceToNextPlayer()
 		}
 
 		// Evaluasi lemparan dadu
-		for i := range players {
-			for j, dice := range players[i].dice {
-				switch dice {
-				case 1:
-					giveDiceToNextPlayer(players, i, j)
-				case 6:
-					players[i].points++
-				case 2, 3:
-					players[i].points += 2
-				}
-			}
+		for i := range activePlayers {
+			activePlayers[i].evaluateDice()
 		}
 
 		// Hapus pemain yang telah selesai bermain (tidak memiliki dadu)
-		players = removeFinishedPlayers(players)
-		if len(players) == 1 {
-			break
-		}
+		activePlayers = removeFinishedPlayers(activePlayers)
 
-		// Tampilkan hasil setiap lemparan dadu
-		displayGameStatus(players)
+		// Tampilkan hasil setelah evaluasi
+		displayGameStatus(activePlayers)
 
 		// Tambahkan counter giliran
 		turn++
@@ -86,20 +82,42 @@ func main() {
 		}
 	}
 
-	fmt.Printf("==================\nGame berakhir karena hanya pemain #%d yang memiliki dadu.", winner.id)
-	fmt.Printf("Game dimenangkan oleh pemain #%d dengan total poin %d.\n", winner.id, winner.points)
+	fmt.Printf("==================\nGame berakhir karena hanya pemain #%d yang memiliki dadu.\n", activePlayers[0].id)
+	fmt.Printf("Game dimenangkan oleh pemain #%d karena memiliki poin lebih banyak dari pemain lainnya.\n", winner.id)
 }
 
-// rollDice menghasilkan angka acak antara 1 hingga 6 untuk lemparan dadu
-func rollDice(random *rand.Rand) int {
-	return random.Intn(6) + 1
+// rollDiceForPlayer melempar dadu untuk seorang pemain
+func rollDiceForPlayer(random *rand.Rand, player *Player) {
+	for i := range player.dice {
+		player.dice[i] = rollDice(random)
+	}
 }
 
-// giveDiceToNextPlayer memberikan dadu angka 1 kepada pemain selanjutnya
-func giveDiceToNextPlayer(players []Player, currentPlayerIndex, diceIndex int) {
-	nextPlayerIndex := (currentPlayerIndex + 1) % len(players)
-	players[nextPlayerIndex].dice = append(players[nextPlayerIndex].dice, 1)
-	players[currentPlayerIndex].dice[diceIndex] = 0 // Remove dice with 1
+// evaluateDice mengevaluasi hasil lemparan dadu pemain
+func (player *Player) evaluateDice() {
+	var newDice []int
+	for _, dice := range player.dice {
+		switch dice {
+		case 1:
+			// player.passDiceToNextPlayer()
+			continue
+		case 6:
+			player.points++ // Hitung poin untuk dadu 6
+		default:
+			newDice = append(newDice, dice)
+		}
+	}
+	player.dice = newDice
+	fmt.Println("player", player.id, "dice:", player.dice)
+}
+
+// passDiceToNextPlayer memberikan dadu angka 1 kepada pemain selanjutnya
+func (player *Player) passDiceToNextPlayer() {
+	nextPlayerIndex := player.id % len(activePlayers)
+	fmt.Println("next player index to pass:", nextPlayerIndex)
+	nextPlayer := &players[nextPlayerIndex]
+	nextPlayer.dice = append(nextPlayer.dice, 1)
+	fmt.Println("next player dice after pass:", nextPlayer.dice)
 }
 
 // removeFinishedPlayers menghapus pemain yang tidak memiliki dadu
@@ -108,8 +126,6 @@ func removeFinishedPlayers(players []Player) []Player {
 	for _, player := range players {
 		if len(player.dice) > 0 {
 			activePlayers = append(activePlayers, player)
-		} else {
-			fmt.Printf("Pemain #%d (0): _ (Berhenti bermain karena tidak memiliki dadu)\n", player.id)
 		}
 	}
 	return activePlayers
@@ -117,14 +133,23 @@ func removeFinishedPlayers(players []Player) []Player {
 
 // displayGameStatus menampilkan status setiap pemain setelah lemparan dadu
 func displayGameStatus(players []Player) {
+	fmt.Println("==================")
 	fmt.Println("Setelah evaluasi:")
 	for _, player := range players {
-		fmt.Printf("Pemain #%d (%d): \n", player.id, player.points)
-		for _, dice := range player.dice {
-			if dice > 0 && dice < 7 {
-				fmt.Printf("%d, ", dice)
+		fmt.Printf("Pemain #%d (%d): ", player.id, player.points)
+		if len(player.dice) == 0 {
+			fmt.Printf("_ (Berhenti bermain karena tidak memiliki dadu)\n")
+		} else {
+			for _, dice := range player.dice {
+				fmt.Printf("%d,", dice)
 			}
+			fmt.Println()
 		}
-		fmt.Println()
 	}
+	fmt.Println("==================")
+}
+
+// rollDice menghasilkan angka acak antara 1 hingga 6 untuk lemparan dadu
+func rollDice(random *rand.Rand) int {
+	return random.Intn(6) + 1
 }
